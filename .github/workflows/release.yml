@@ -45,8 +45,8 @@ jobs:
         run: |
           mkdir -p release
           
-          # 创建完整源码包
-          tar -czf release/libSea3-${{ steps.tag_info.outputs.tag_name }}-source.tar.gz \
+          # 创建全量包（源码 + 内置头文件 + third_lib 预编译库/头文件等）
+          tar -czf release/libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-full.tar.gz \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='obj' \
@@ -57,20 +57,25 @@ jobs:
             --exclude='release' \
             .
           
-          # 创建仅头文件和 Driver 的轻量包
-          tar -czf release/libSea3-${{ steps.tag_info.outputs.tag_name }}-headers.tar.gz \
+          # 创建仅头文件包（include + driver）
+          tar -czf release/libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-headers.tar.gz \
             include/ \
             driver/ \
             README.md \
             LICENSE
           
-          # 创建预编译库包
-          tar -czf release/libSea3-${{ steps.tag_info.outputs.tag_name }}-prebuilt.tar.gz \
-            lib/ \
-            include/ \
-            driver/ \
-            jni/ \
-            README.md
+          # 创建静态库包（仅核心静态库 .a）
+          tar -czf release/libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-static-libs.tar.gz \
+            thrid_libs/*/lib/ \
+            README.md \
+            LICENSE
+          
+          # 创建 third_lib 头文件 + 静态库包（thrid_libs 的 include + lib）
+          tar -czf release/libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-third_libs.tar.gz \
+            thrid_libs/*/include/ \
+            thrid_libs/*/lib/ \
+            README.md \
+            LICENSE
           
           echo "✅ 打包完成"
           ls -lh release/
@@ -108,16 +113,16 @@ jobs:
       # 7. 打包编译产物
       - name: 打包编译产物
         run: |
-          # 打包所有架构的可执行文件
-          tar -czf release/libSea3-${{ steps.tag_info.outputs.tag_name }}-binaries.tar.gz libs/
-          
-          # 为每个架构单独打包
-          cd libs
-          for arch in */; do
-            arch_name=${arch%/}
-            tar -czf ../release/libSea3-${{ steps.tag_info.outputs.tag_name }}-${arch_name}.tar.gz $arch_name/
+          # 内存库包：只打包 memory 可执行文件（按架构）
+          mkdir -p release/memory_bins
+          for abi in arm64-v8a x86_64; do
+            if [ -f "libs/${abi}/memory" ]; then
+              mkdir -p "release/memory_bins/${abi}"
+              cp "libs/${abi}/memory" "release/memory_bins/${abi}/"
+            fi
           done
-          cd ..
+          tar -czf release/libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-memory-bins.tar.gz -C release memory_bins
+          rm -rf release/memory_bins
           
           echo "✅ 编译产物打包完成"
           ls -lh release/
@@ -127,21 +132,18 @@ jobs:
         id: release_notes
         run: |
           cat > release_notes.md << 'EOF'
-          # 🎉 libSea3 ${{ steps.tag_info.outputs.tag_name }}
+          # 🎉 libSeaUtral ${{ steps.tag_info.outputs.tag_name }}
           
           **发布日期**: ${{ steps.tag_info.outputs.date }}
           
           ## 📦 下载说明
           
-          ### 源码包
-          - **libSea3-${{ steps.tag_info.outputs.tag_name }}-source.tar.gz** - 完整源代码（推荐）
-          - **libSea3-${{ steps.tag_info.outputs.tag_name }}-headers.tar.gz** - 仅头文件和 Driver
-          - **libSea3-${{ steps.tag_info.outputs.tag_name }}-prebuilt.tar.gz** - 预编译库包
-          
-          ### 编译产物
-          - **libSea3-${{ steps.tag_info.outputs.tag_name }}-binaries.tar.gz** - 所有架构的可执行文件
-          - **libSea3-${{ steps.tag_info.outputs.tag_name }}-arm64-v8a.tar.gz** - ARM64 版本
-          - **libSea3-${{ steps.tag_info.outputs.tag_name }}-x86_64.tar.gz** - x86_64 版本
+          ### 资源包
+          - **libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-full.tar.gz** - 全量包（推荐）
+          - **libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-headers.tar.gz** - 头文件包（include + driver）
+          - **libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-static-libs.tar.gz** - 静态库包（.a）
+          - **libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-third_libs.tar.gz** - third_lib 头文件 + 静态库包
+          - **libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-memory-bins.tar.gz** - 内存库包（memory 可执行文件）
           
           ## ✨ 主要特性
           
@@ -158,25 +160,22 @@ jobs:
           ## 🚀 快速开始
           
           ```bash
-          # 下载源码包
-          tar -xzf libSea3-${{ steps.tag_info.outputs.tag_name }}-source.tar.gz
-          cd libSea3
+          # 下载全量包
+          tar -xzf libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-full.tar.gz
+          cd libSeaUtral
           
           # 编译
           export ANDROID_NDK_HOME=/path/to/ndk
           ndk-build
-          
-          # 或直接使用预编译版本
-          tar -xzf libSea3-${{ steps.tag_info.outputs.tag_name }}-arm64-v8a.tar.gz
           ```
           
           ## 📖 文档
           
-          详细使用说明请查看 [README.md](https://github.com/AYssu/libSea3/blob/main/README.md)
+          详细使用说明请查看仓库内的 README.md
           
           ## 💬 反馈
           
-          如有问题或建议，欢迎提 [Issue](https://github.com/AYssu/libSea3/issues)
+          如有问题或建议，欢迎提 Issue
           
           ---
           
@@ -189,17 +188,16 @@ jobs:
       - name: 创建 Release
         uses: softprops/action-gh-release@v1
         with:
-          name: libSea3 ${{ steps.tag_info.outputs.tag_name }}
+          name: libSeaUtral ${{ steps.tag_info.outputs.tag_name }}
           body_path: release_notes.md
           draft: false
           prerelease: false
           files: |
-            release/libSea3-${{ steps.tag_info.outputs.tag_name }}-source.tar.gz
-            release/libSea3-${{ steps.tag_info.outputs.tag_name }}-headers.tar.gz
-            release/libSea3-${{ steps.tag_info.outputs.tag_name }}-prebuilt.tar.gz
-            release/libSea3-${{ steps.tag_info.outputs.tag_name }}-binaries.tar.gz
-            release/libSea3-${{ steps.tag_info.outputs.tag_name }}-arm64-v8a.tar.gz
-            release/libSea3-${{ steps.tag_info.outputs.tag_name }}-x86_64.tar.gz
+            release/libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-full.tar.gz
+            release/libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-headers.tar.gz
+            release/libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-static-libs.tar.gz
+            release/libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-third_libs.tar.gz
+            release/libSeaUtral-${{ steps.tag_info.outputs.tag_name }}-memory-bins.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
       
       # 10. 输出摘要

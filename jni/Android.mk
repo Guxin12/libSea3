@@ -1,15 +1,15 @@
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := libSea3
-LOCAL_SRC_FILES := ../lib/$(TARGET_ARCH_ABI)/libSea3.a
+LOCAL_MODULE := libSea4
+LOCAL_SRC_FILES := ../thrid_libs/$(TARGET_ARCH_ABI)/lib/libSea4.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 
 # 设置模块名称
 LOCAL_MODULE := utils
-LOCAL_STATIC_LIBRARIES := libSea3
+LOCAL_STATIC_LIBRARIES := libSea4
 
 # 设置编译器标志（全局）
 # 注意：使用 -O3 而非 -Ofast，避免与 thread_local + syscall 的已知优化 bug
@@ -32,7 +32,7 @@ include $(CLEAR_VARS)
 
 # 设置模块名称
 LOCAL_MODULE := memory
-LOCAL_STATIC_LIBRARIES := libSea3
+LOCAL_STATIC_LIBRARIES := libSea4
 
 # 设置编译器标志（全局）
 # 注意：使用 -O3 而非 -Ofast，避免与 thread_local + syscall 的已知优化 bug
